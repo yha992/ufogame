@@ -7,7 +7,6 @@
     <style>
         body {
             margin: 0;
-            padding: 0;
             background: radial-gradient(circle at 50% 30%, #1a0b3d 0%, #0d1b3d 50%, #000814 100%);
             font-family: 'Courier New', monospace;
             display: flex;
@@ -27,22 +26,76 @@
         #gameCanvas {
             display: block;
             background: radial-gradient(circle at 50% 30%, #1a0b3d 0%, #0d1b3d 50%, #000814 100%);
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
         }
         
         #ui {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 15px;
+            right: 15px;
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(0, 255, 0, 0.2));
+            border: 2px solid #00ffff;
+            border-radius: 15px;
+            padding: 15px 20px;
             color: #00ff00;
             font-size: 18px;
             font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            text-shadow: 0 0 10px #00ff00;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.5),
+                inset 0 0 20px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            animation: pulse 2s infinite;
         }
         
-        #instructions {
+        @keyframes pulse {
+            0%, 100% { 
+                box-shadow: 
+                    0 0 20px rgba(0, 255, 255, 0.5),
+                    inset 0 0 20px rgba(0, 255, 255, 0.1);
+            }
+            50% { 
+                box-shadow: 
+                    0 0 30px rgba(0, 255, 255, 0.8),
+                    inset 0 0 30px rgba(0, 255, 255, 0.2);
+            }
+        }
+        
+        #timer {
+            color: #ffffff;
+            text-shadow: 0 0 15px #00ffff;
+            font-size: 22px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00ffff, #ffffff, #00ffff);
+            background-size: 200% 200%;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+        
+        @keyframes shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .timer-label {
+            display: inline-block;
+            margin-right: 8px;
+            position: relative;
+        }
+        
+        .timer-label::before {
+            content: "⏱️";
+            margin-right: 5px;
+            animation: rotate 4s linear infinite;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .overlay {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -50,21 +103,12 @@
             color: #ffffff;
             text-align: center;
             font-size: 16px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             z-index: 10;
         }
         
         #gameOver {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
             color: #ff0000;
-            text-align: center;
             font-size: 24px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            z-index: 10;
             display: none;
         }
         
@@ -85,20 +129,25 @@
             margin: 0 10px;
             border-radius: 5px;
             cursor: pointer;
-            user-select: none;
         }
         
-        .control-btn:active {
-            background: rgba(0, 255, 255, 0.6);
+        .timer-unit {
+            color: #88ffff;
+            font-size: 16px;
+            margin-left: 3px;
+            text-shadow: 0 0 8px #88ffff;
         }
         
         @media (max-width: 768px) {
-            .mobile-controls {
-                display: block;
+            .mobile-controls { display: block; }
+            .overlay { font-size: 14px; }
+            #ui {
+                top: 10px;
+                right: 10px;
+                padding: 10px 15px;
+                font-size: 16px;
             }
-            #instructions {
-                font-size: 14px;
-            }
+            #timer { font-size: 18px; }
         }
     </style>
 </head>
@@ -106,20 +155,17 @@
     <div id="gameContainer">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="ui">
-            <div>생존 시간: <span id="timer">0</span>초</div>
+            <span class="timer-label">생존 시간</span><span id="timer">0</span><span class="timer-unit">초</span>
         </div>
-        <div id="instructions">
-            <div>🛸 UFO 혜성 피하기 🌠</div>
-            <br>
+        <div id="instructions" class="overlay">
+            <div>🛸 UFO 혜성 피하기 🌠</div><br>
             <div>스페이스바를 눌러 게임 시작</div>
             <div>화살표 키로 UFO 이동</div>
             <div>스페이스바로 미사일 발사</div>
         </div>
-        <div id="gameOver">
-            <div>💥 GAME OVER 💥</div>
-            <br>
-            <div>생존 시간: <span id="finalScore">0</span>초</div>
-            <br>
+        <div id="gameOver" class="overlay">
+            <div>💥 GAME OVER 💥</div><br>
+            <div>생존 시간: <span id="finalScore">0</span>초</div><br>
             <div>스페이스바를 눌러 재시작</div>
         </div>
         <div class="mobile-controls">
@@ -131,44 +177,30 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const timerElement = document.getElementById('timer');
-        const instructionsElement = document.getElementById('instructions');
-        const gameOverElement = document.getElementById('gameOver');
-        const finalScoreElement = document.getElementById('finalScore');
+        const elements = {
+            timer: document.getElementById('timer'),
+            instructions: document.getElementById('instructions'),
+            gameOver: document.getElementById('gameOver'),
+            finalScore: document.getElementById('finalScore')
+        };
         
-        // 게임 상태
-        let gameState = 'waiting'; // 'waiting', 'playing', 'gameOver'
+        let gameState = 'waiting';
         let gameStartTime = 0;
         let survivalTime = 0;
         
-        // UFO 객체
-        const ufo = {
-            x: 400,
-            y: 500,
-            width: 40,
-            height: 20,
-            speed: 5
-        };
+        const ufo = { x: 400, y: 500, width: 40, height: 20, speed: 5 };
+        let meteors = [], missiles = [], explosions = [];
+        const keys = { left: false, right: false };
         
-        // 운석 배열
-        let meteors = [];
+        // 별 배경
+        const stars = Array.from({length: 100}, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2 + 1,
+            speed: Math.random() * 0.5 + 0.2
+        }));
         
-        // 미사일 배열
-        let missiles = [];
-        
-        // 폭발 효과 배열
-        let explosions = [];
-        
-        // 파티클 배열
-        let particles = [];
-        
-        // 입력 상태
-        const keys = {
-            left: false,
-            right: false
-        };
-        
-        // UFO 도트맵 (더 귀여운 버전)
+        // UFO 도트맵 (V1 버전)
         const ufoPixels = [
             [0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],
             [0,0,1,1,2,2,2,2,2,2,2,2,1,1,0,0],
@@ -181,7 +213,7 @@
             [0,0,0,0,4,5,5,5,5,5,5,4,0,0,0,0]
         ];
         
-        // 색상 매핑 (더 화려하게)
+        // 색상 매핑
         const colors = {
             0: null, // 투명
             1: '#666666', // 테두리
@@ -191,7 +223,7 @@
             5: '#88ff88'  // 연한 초록색 (하단 빛)
         };
         
-        // UFO 그리기 (글로우 효과 추가)
+        // UFO 그리기 (V1 버전)
         function drawUFO() {
             const pixelSize = 3;
             const startX = ufo.x - (ufoPixels[0].length * pixelSize) / 2;
@@ -220,333 +252,345 @@
             ctx.shadowBlur = 0;
         }
         
-        // 미사일 클래스 (화염 효과 추가)
+        // 미사일 클래스
         class Missile {
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.width = 4;
-                this.height = 12;
                 this.speed = 8;
-                this.trail = [];
             }
             
-            update() {
-                // 꼬리 효과를 위한 이전 위치 저장
-                this.trail.push({x: this.x, y: this.y + this.height});
-                if (this.trail.length > 6) {
-                    this.trail.shift();
-                }
-                
-                this.y -= this.speed;
-            }
+            update() { this.y -= this.speed; }
             
             draw() {
-                // 미사일 꼬리 (화염 효과)
-                ctx.globalAlpha = 0.7;
-                for (let i = 0; i < this.trail.length; i++) {
-                    const alpha = (i + 1) / this.trail.length * 0.8;
-                    const size = (i + 1) / this.trail.length * 6;
-                    ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
-                    ctx.fillRect(this.trail[i].x - size/2, this.trail[i].y, size, size);
-                    ctx.fillStyle = `rgba(255, 100, 0, ${alpha * 0.7})`;
-                    ctx.fillRect(this.trail[i].x - size/3, this.trail[i].y + size/2, size/1.5, size);
-                }
-                ctx.globalAlpha = 1;
-                
-                // 글로우 효과
                 ctx.shadowColor = '#00ffff';
-                ctx.shadowBlur = 8;
-                
-                // 미사일 도트 패턴 (더 세밀하게)
-                const missilePixels = [
-                    [0,1,1,1,0],
-                    [1,2,3,2,1],
-                    [1,2,3,2,1],
-                    [1,2,3,2,1],
-                    [1,2,3,2,1],
-                    [1,2,3,2,1],
-                    [0,1,2,1,0]
-                ];
-                
-                const missileColors = {
-                    1: '#0080ff', // 파란색
-                    2: '#00ffff', // 사이안
-                    3: '#ffffff'  // 흰색 (중심)
-                };
-                
-                const pixelSize = 2;
-                for (let row = 0; row < missilePixels.length; row++) {
-                    for (let col = 0; col < missilePixels[row].length; col++) {
-                        const colorKey = missilePixels[row][col];
-                        if (colorKey !== 0) {
-                            ctx.fillStyle = missileColors[colorKey];
-                            ctx.fillRect(
-                                this.x - 5 + col * pixelSize,
-                                this.y - 14 + row * pixelSize,
-                                pixelSize,
-                                pixelSize
-                            );
-                        }
-                    }
-                }
-                
+                ctx.shadowBlur = 5;
+                ctx.fillStyle = '#00ffff';
+                ctx.fillRect(this.x - 2, this.y, 4, 12);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(this.x - 1, this.y, 2, 12);
                 ctx.shadowBlur = 0;
             }
             
-            isOffScreen() {
-                return this.y < -this.height;
-            }
+            isOffScreen() { return this.y < -12; }
             
-            checkCollision(meteor) {
-                return this.x < meteor.x + meteor.width &&
-                       this.x + this.width > meteor.x &&
-                       this.y < meteor.y + meteor.height &&
-                       this.y + this.height > meteor.y;
+            checkCollision(obj) {
+                return this.x < obj.x + obj.width &&
+                       this.x + 4 > obj.x &&
+                       this.y < obj.y + obj.height &&
+                       this.y + 12 > obj.y;
             }
         }
+        
+        // 운석(행성/별) 클래스
         class Meteor {
             constructor() {
                 this.x = Math.random() * (canvas.width - 30);
                 this.y = -30;
-                this.width = 20;
-                this.height = 20;
+                this.width = 25;
+                this.height = 25;
                 this.speed = Math.random() * 3 + 2;
                 this.rotation = 0;
+                this.type = Math.random() < 0.4 ? 'star' : (Math.random() < 0.5 ? 'planet1' : 'planet2');
+                this.sparkles = [];
+                
+                // 반짝임 효과용
+                if (this.type === 'star') {
+                    for (let i = 0; i < 6; i++) {
+                        this.sparkles.push({
+                            angle: (i * 60) * Math.PI / 180,
+                            length: Math.random() * 8 + 5,
+                            opacity: Math.random()
+                        });
+                    }
+                }
             }
             
             update() {
                 this.y += this.speed;
-                this.rotation += 0.1;
+                this.rotation += 0.05;
+                
+                // 반짝임 효과 업데이트
+                this.sparkles.forEach(sparkle => {
+                    sparkle.opacity = 0.3 + Math.sin(Date.now() * 0.01 + sparkle.angle) * 0.7;
+                });
             }
             
             draw() {
                 ctx.save();
-                ctx.translate(this.x + this.width/2, this.y + this.height/2);
-                ctx.rotate(this.rotation);
+                ctx.translate(this.x + 12.5, this.y + 12.5);
                 
-                // 운석 도트 패턴
-                const meteorPixels = [
-                    [0,1,1,1,0],
-                    [1,2,2,2,1],
-                    [1,2,3,2,1],
-                    [1,2,2,2,1],
-                    [0,1,1,1,0]
-                ];
-                
-                const meteorColors = {
-                    1: '#8B0000', // 어두운 빨간색
-                    2: '#FF0000', // 빨간색
-                    3: '#FF6600'  // 주황색
-                };
-                
-                const pixelSize = 4;
-                for (let row = 0; row < meteorPixels.length; row++) {
-                    for (let col = 0; col < meteorPixels[row].length; col++) {
-                        const colorKey = meteorPixels[row][col];
-                        if (colorKey !== 0) {
-                            ctx.fillStyle = meteorColors[colorKey];
-                            ctx.fillRect(
-                                -10 + col * pixelSize,
-                                -10 + row * pixelSize,
-                                pixelSize,
-                                pixelSize
-                            );
-                        }
-                    }
+                if (this.type === 'star') {
+                    this.drawStar();
+                } else if (this.type === 'planet1') {
+                    this.drawPlanet1();
+                } else {
+                    this.drawPlanet2();
                 }
+                
                 ctx.restore();
             }
             
-            isOffScreen() {
-                return this.y > canvas.height;
+            drawStar() {
+                // 반짝임 광선
+                this.sparkles.forEach(sparkle => {
+                    ctx.globalAlpha = sparkle.opacity;
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(
+                        Math.cos(sparkle.angle + this.rotation) * sparkle.length,
+                        Math.sin(sparkle.angle + this.rotation) * sparkle.length
+                    );
+                    ctx.stroke();
+                });
+                
+                ctx.globalAlpha = 1;
+                
+                // 별 중심
+                ctx.shadowColor = '#ffff00';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
             }
             
-            checkCollision(ufo) {
-                return this.x < ufo.x + ufo.width &&
-                       this.x + this.width > ufo.x &&
-                       this.y < ufo.y + ufo.height &&
-                       this.y + this.height > ufo.y;
+            drawPlanet1() {
+                // 행성 글로우
+                ctx.shadowColor = '#ff6b6b';
+                ctx.shadowBlur = 12;
+                
+                // 행성 본체 (화성 스타일)
+                ctx.fillStyle = '#ff6b6b';
+                ctx.beginPath();
+                ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 행성 표면 디테일
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#ff4757';
+                ctx.beginPath();
+                ctx.arc(-3, -2, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(2, 3, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 하이라이트
+                ctx.fillStyle = '#ffa8a8';
+                ctx.beginPath();
+                ctx.arc(-2, -3, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            drawPlanet2() {
+                // 행성 글로우
+                ctx.shadowColor = '#74b9ff';
+                ctx.shadowBlur = 12;
+                
+                // 행성 본체 (해왕성 스타일)
+                ctx.fillStyle = '#74b9ff';
+                ctx.beginPath();
+                ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 고리
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#0984e3';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 14, 4, this.rotation, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.strokeStyle = '#a29bfe';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 16, 3, this.rotation, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // 행성 표면
+                ctx.fillStyle = '#0984e3';
+                ctx.beginPath();
+                ctx.arc(1, -1, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 하이라이트
+                ctx.fillStyle = '#b2dffc';
+                ctx.beginPath();
+                ctx.arc(-2, -2, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            isOffScreen() { return this.y > canvas.height; }
+            
+            checkCollision(obj) {
+                const centerX = this.x + 12.5;
+                const centerY = this.y + 12.5;
+                const objCenterX = obj.x + obj.width/2;
+                const objCenterY = obj.y + obj.height/2;
+                const distance = Math.sqrt((centerX - objCenterX)**2 + (centerY - objCenterY)**2);
+                return distance < 15;
             }
         }
         
-        // 별 배경 (더 화려하게)
-        const stars = [];
-        for (let i = 0; i < 150; i++) {
-            stars.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                size: Math.random() * 3 + 1,
-                speed: Math.random() * 0.8 + 0.2,
-                twinkle: Math.random() * Math.PI * 2,
-                color: ['#ffffff', '#ffff88', '#88ffff', '#ff88ff'][Math.floor(Math.random() * 4)]
-            });
+        // 폭발 클래스 (더 화려하게)
+        class Explosion {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.particles = Array.from({length: 12}, () => ({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 25,
+                    size: Math.random() * 4 + 2,
+                    color: ['#ffff00', '#ff6b6b', '#74b9ff', '#ffffff'][Math.floor(Math.random() * 4)]
+                }));
+            }
+            
+            update() {
+                this.particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vx *= 0.98;
+                    p.vy *= 0.98;
+                    p.life--;
+                    p.size *= 0.96;
+                });
+            }
+            
+            draw() {
+                this.particles.forEach(p => {
+                    if (p.life > 0) {
+                        ctx.globalAlpha = p.life / 25;
+                        ctx.shadowColor = p.color;
+                        ctx.shadowBlur = 8;
+                        ctx.fillStyle = p.color;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+                ctx.globalAlpha = 1;
+                ctx.shadowBlur = 0;
+            }
+            
+            isDead() { return this.particles.every(p => p.life <= 0); }
         }
         
         function drawStars() {
+            ctx.fillStyle = '#ffffff';
             stars.forEach(star => {
-                const alpha = 0.5 + Math.sin(star.twinkle) * 0.5;
-                ctx.globalAlpha = alpha;
-                ctx.fillStyle = star.color;
                 ctx.fillRect(star.x, star.y, star.size, star.size);
-                
                 star.y += star.speed;
-                star.twinkle += 0.05;
-                
                 if (star.y > canvas.height) {
                     star.y = -star.size;
                     star.x = Math.random() * canvas.width;
                 }
             });
-            ctx.globalAlpha = 1;
         }
         
-        // 게임 시작
         function startGame() {
             gameState = 'playing';
             gameStartTime = Date.now();
             meteors = [];
             missiles = [];
             explosions = [];
-            particles = [];
             ufo.x = 400;
             ufo.y = 500;
-            instructionsElement.style.display = 'none';
-            gameOverElement.style.display = 'none';
+            elements.instructions.style.display = 'none';
+            elements.gameOver.style.display = 'none';
         }
         
-        // 게임 오버
         function gameOver() {
             gameState = 'gameOver';
-            finalScoreElement.textContent = Math.floor(survivalTime);
-            gameOverElement.style.display = 'block';
+            elements.finalScore.textContent = Math.floor(survivalTime);
+            elements.gameOver.style.display = 'block';
         }
         
-        // UFO 업데이트
-        function updateUFO() {
-            if (keys.left && ufo.x > 0) {
-                ufo.x -= ufo.speed;
-            }
-            if (keys.right && ufo.x < canvas.width - ufo.width) {
-                ufo.x += ufo.speed;
-            }
-        }
-        
-        // 미사일 발사
-        function fireMissile() {
-            missiles.push(new Missile(ufo.x + ufo.width/2, ufo.y));
-        }
-        function spawnMeteor() {
-            if (Math.random() < 0.02 + survivalTime * 0.0005) {
+        function updateGame() {
+            if (gameState !== 'playing') return;
+            
+            survivalTime = (Date.now() - gameStartTime) / 1000;
+            elements.timer.textContent = Math.floor(survivalTime);
+            
+            // UFO 이동
+            if (keys.left && ufo.x > 0) ufo.x -= ufo.speed;
+            if (keys.right && ufo.x < canvas.width - ufo.width) ufo.x += ufo.speed;
+            
+            // 운석 생성
+            if (Math.random() < 0.015 + survivalTime * 0.0003) {
                 meteors.push(new Meteor());
             }
+            
+            // 미사일 업데이트
+            missiles.forEach(missile => missile.update());
+            missiles = missiles.filter(missile => !missile.isOffScreen());
+            
+            // 운석 업데이트
+            meteors.forEach(meteor => meteor.update());
+            
+            // 충돌 검사
+            meteors.forEach((meteor, i) => {
+                if (meteor.checkCollision(ufo)) {
+                    gameOver();
+                    return;
+                }
+                
+                missiles.forEach((missile, j) => {
+                    if (missile.checkCollision(meteor)) {
+                        explosions.push(new Explosion(meteor.x + 12.5, meteor.y + 12.5));
+                        meteors.splice(i, 1);
+                        missiles.splice(j, 1);
+                    }
+                });
+            });
+            
+            meteors = meteors.filter(meteor => !meteor.isOffScreen());
+            
+            // 폭발 업데이트
+            explosions.forEach(explosion => explosion.update());
+            explosions = explosions.filter(explosion => !explosion.isDead());
         }
         
-        // 게임 루프
-        function gameLoop() {
-            // 화면 지우기
+        function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // 별 그리기
             drawStars();
+            drawUFO();
             
-            if (gameState === 'playing') {
-                // 생존 시간 업데이트
-                survivalTime = (Date.now() - gameStartTime) / 1000;
-                timerElement.textContent = Math.floor(survivalTime);
-                
-                // UFO 업데이트 및 그리기
-                updateUFO();
-                drawUFO();
-                
-                // 운석 생성
-                spawnMeteor();
-                
-                // 미사일 업데이트 및 그리기
-                for (let i = missiles.length - 1; i >= 0; i--) {
-                    missiles[i].update();
-                    missiles[i].draw();
-                    
-                    // 화면 밖으로 나간 미사일 제거
-                    if (missiles[i].isOffScreen()) {
-                        missiles.splice(i, 1);
-                    }
-                }
-                
-                // 운석 업데이트 및 그리기
-                for (let i = meteors.length - 1; i >= 0; i--) {
-                    meteors[i].update();
-                    meteors[i].draw();
-                    
-                    // UFO와 운석 충돌 검사
-                    if (meteors[i].checkCollision(ufo)) {
-                        gameOver();
-                        break;
-                    }
-                    
-                    // 미사일과 운석 충돌 검사
-                    let meteorDestroyed = false;
-                    for (let j = missiles.length - 1; j >= 0; j--) {
-                        if (missiles[j].checkCollision(meteors[i])) {
-                            // 폭발 효과 생성
-                            explosions.push(new Explosion(
-                                meteors[i].x + meteors[i].width/2,
-                                meteors[i].y + meteors[i].height/2
-                            ));
-                            
-                            // 운석과 미사일 제거
-                            missiles.splice(j, 1);
-                            meteors.splice(i, 1);
-                            meteorDestroyed = true;
-                            break;
-                        }
-                    }
-                    
-                    // 운석이 파괴되지 않았다면 화면 밖 검사
-                    if (!meteorDestroyed && meteors[i] && meteors[i].isOffScreen()) {
-                        meteors.splice(i, 1);
-                    }
-                }
-                
-                // 폭발 효과 업데이트 및 그리기
-                for (let i = explosions.length - 1; i >= 0; i--) {
-                    explosions[i].update();
-                    explosions[i].draw();
-                    
-                    if (explosions[i].isDead()) {
-                        explosions.splice(i, 1);
-                    }
-                }
-            } else {
-                // 대기 중이거나 게임 오버 상태에서도 UFO 그리기
-                drawUFO();
-                
-                // 운석들 그리기 (게임 오버 상태)
-                meteors.forEach(meteor => meteor.draw());
-                
-                // 미사일들 그리기 (게임 오버 상태)
-                missiles.forEach(missile => missile.draw());
-            }
-            
+            missiles.forEach(missile => missile.draw());
+            meteors.forEach(meteor => meteor.draw());
+            explosions.forEach(explosion => explosion.draw());
+        }
+        
+        function gameLoop() {
+            updateGame();
+            draw();
             requestAnimationFrame(gameLoop);
         }
         
-        // 키보드 이벤트
+        // 이벤트
         document.addEventListener('keydown', (e) => {
             switch(e.code) {
-                case 'ArrowLeft':
-                    keys.left = true;
-                    e.preventDefault();
-                    break;
-                case 'ArrowRight':
-                    keys.right = true;
-                    e.preventDefault();
-                    break;
+                case 'ArrowLeft': keys.left = true; e.preventDefault(); break;
+                case 'ArrowRight': keys.right = true; e.preventDefault(); break;
                 case 'Space':
                     if (gameState === 'waiting' || gameState === 'gameOver') {
                         startGame();
                     } else if (gameState === 'playing') {
-                        fireMissile();
+                        missiles.push(new Missile(ufo.x + ufo.width/2, ufo.y));
                     }
                     e.preventDefault();
                     break;
@@ -554,26 +598,14 @@
         });
         
         document.addEventListener('keyup', (e) => {
-            switch(e.code) {
-                case 'ArrowLeft':
-                    keys.left = false;
-                    break;
-                case 'ArrowRight':
-                    keys.right = false;
-                    break;
-            }
+            if (e.code === 'ArrowLeft') keys.left = false;
+            if (e.code === 'ArrowRight') keys.right = false;
         });
         
-        // 모바일 터치 이벤트
-        let touchStartX = 0;
-        
+        // 모바일 터치
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            touchStartX = e.touches[0].clientX;
-            
-            if (gameState === 'waiting' || gameState === 'gameOver') {
-                startGame();
-            }
+            if (gameState === 'waiting' || gameState === 'gameOver') startGame();
         });
         
         canvas.addEventListener('touchmove', (e) => {
@@ -582,45 +614,24 @@
                 const touch = e.touches[0];
                 const rect = canvas.getBoundingClientRect();
                 const touchX = touch.clientX - rect.left;
-                
-                if (touchX < canvas.width / 2) {
-                    keys.left = true;
-                    keys.right = false;
-                } else {
-                    keys.right = true;
-                    keys.left = false;
-                }
+                keys.left = touchX < canvas.width / 2;
+                keys.right = touchX >= canvas.width / 2;
             }
         });
         
         canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
-            keys.left = false;
-            keys.right = false;
+            keys.left = keys.right = false;
         });
         
-        // 모바일 컨트롤 버튼
-        document.getElementById('leftBtn').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            keys.left = true;
+        // 모바일 버튼
+        ['leftBtn', 'rightBtn'].forEach((id, index) => {
+            const btn = document.getElementById(id);
+            const key = index === 0 ? 'left' : 'right';
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
         });
         
-        document.getElementById('leftBtn').addEventListener('touchend', (e) => {
-            e.preventDefault();
-            keys.left = false;
-        });
-        
-        document.getElementById('rightBtn').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            keys.right = true;
-        });
-        
-        document.getElementById('rightBtn').addEventListener('touchend', (e) => {
-            e.preventDefault();
-            keys.right = false;
-        });
-        
-        // 게임 시작
         gameLoop();
     </script>
 </body>
